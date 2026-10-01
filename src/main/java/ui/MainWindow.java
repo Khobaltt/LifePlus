@@ -1,5 +1,7 @@
 package main.java.ui;
 
+import main.java.core.HexGrid;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -39,11 +41,11 @@ public class MainWindow extends JFrame {
      */
     private void initializeComponents() {
 
-        // Main simulation area
-        gridPanel = new JPanel();
+        // main simulation area
+        setGridPanel();
         gridPanel.setBackground(Color.DARK_GRAY);
 
-        // Right-side controls
+        // toolbar controls
         toolPanel = new JPanel();
         toolPanel.setPreferredSize(new Dimension(250, 0));
         toolPanel.setBackground(new Color(230, 230, 230));
@@ -101,10 +103,10 @@ public class MainWindow extends JFrame {
     /*
      * Replaces the current grid panel
      */
-    public void setGridPanel(JPanel panel) {
-        remove(gridPanel);
+    public void setGridPanel() {
 
-        gridPanel = panel;
+        HexGrid simulationGrid = new HexGrid();
+        gridPanel = new GridPanel(simulationGrid);
 
         add(gridPanel, BorderLayout.CENTER);
 
