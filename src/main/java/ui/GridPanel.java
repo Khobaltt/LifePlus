@@ -1,13 +1,24 @@
 package main.java.ui;
 
+// files
 import main.java.core.HexCoord;
 import main.java.core.HexGrid;
 import main.java.core.TileType;
+// import main.java.core.TileColor;
 
+// util
+import java.util.EnumMap;
+import java.util.Map;
+
+// swing/awt
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
+import java.awt.geom.Path2D;
+
+// image processing
+import java.awt.image.BufferedImage;
 
 public class GridPanel extends JPanel {
 
@@ -25,9 +36,20 @@ public class GridPanel extends JPanel {
     // tile currently placed by left-click
     private TileType selectedTile = TileType.CONWAY;
 
+    // brush type and size
+    // private BrushType brushType = ;
+    // private TileColor brushColor = new TileColor(255, 255, 255);
+    // private int brushSize = 1;
+
     // mouse state for panning
     private Point lastMousePosition;
     private boolean panning = false;
+
+    // image caching
+    private BufferedImage gridBackground;
+    private BufferedImage emptyHexImage;
+    private final Map<TileType, BufferedImage> tileImages = new EnumMap<>(TileType.class);
+    private double cachedHexSize = -1;
 
     public GridPanel(HexGrid grid) {
         this.grid = grid;
@@ -45,19 +67,32 @@ public class GridPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        if (getWidth() <= 0 || getHeight() <= 0) { return; }
+        ensureHexImages();
+        if (hexSize > 15) { ensureGridBackground(); }
 
         Graphics2D g2 = (Graphics2D) g.create();
 
-        // makes hexagon edges look smoother.
-        g2.setRenderingHint(
-            RenderingHints.KEY_ANTIALIASING,
-            RenderingHints.VALUE_ANTIALIAS_ON
-        );
+        try {
+            if (hexSize > 15) {
+                g2.drawImage(gridBackground, 0, 0, null);
+            }
 
-        if (hexSize > 15) { drawGrid(g2); }
-        drawTiles(g2);
+            drawTiles(g2);
+        } finally {
+            g2.dispose();
+        }
 
-        g2.dispose();
+        // // makes hexagon edges look smoother.
+        // g2.setRenderingHint(
+        //     RenderingHints.KEY_ANTIALIASING,
+        //     RenderingHints.VALUE_ANTIALIAS_ON
+        // );
+
+        // if (hexSize > 15) { drawGrid(g2); }
+        // drawTiles(g2);
+
+        // g2.dispose();
     }
 
     /*
@@ -65,34 +100,162 @@ public class GridPanel extends JPanel {
      */
     private void drawGrid(Graphics2D g2) {
 
-        // get anchor coordinates of the screen
-        HexCoord topLeft = pixelToHex(0, 0);
-        HexCoord bottomRight = pixelToHex(getWidth(), getHeight());
+        HexCoord[] corners = {
+            pixelToHex(0, 0),
+            pixelToHex(getWidth(), 0),
+            pixelToHex(0, getHeight()),
+            pixelToHex(getWidth(), getHeight())
+        };
 
-        // large enough to cover the visible screen.
-        int minQ = topLeft.q;
-        int maxQ = bottomRight.q;
-        int minR = bottomRight.r;
-        int maxR = topLeft.r;
-        // int range = 20; //calculateVisibleRange();
+        int minQ = Integer.MAX_VALUE;
+        int maxQ = Integer.MIN_VALUE;
+        int minR = Integer.MAX_VALUE;
+        int maxR = Integer.MIN_VALUE;
 
-        for (int q = minQ; q <= maxQ; q++) {
-            for (int r = minR; r <= maxR; r++) {
+        for (HexCoord corner : corners) {
+            minQ = Math.min(minQ, corner.q);
+            maxQ = Math.max(maxQ, corner.q);
+            minR = Math.min(minR, corner.r);
+            maxR = Math.max(maxR, corner.r);
+        }
 
-                HexCoord coord = new HexCoord(
-                    (int) cameraQ + q,
-                    (int) cameraR + r
-                );
-
+        // Extra cells cover hexagons partly visible at the panel edges.
+        for (int q = minQ - 2; q <= maxQ + 2; q++) {
+            for (int r = minR - 2; r <= maxR + 2; r++) {
+                HexCoord coord = new HexCoord(q, r);
                 Point2D center = hexToPixel(coord);
 
-                // don't bother drawing hexagons outside the screen.
-                if (!isVisible(center)) { continue; }
-
-                drawHex(g2, center, new Color(65, 65, 65));
+                if (isVisible(center)) {
+                    drawHexImage(g2, emptyHexImage, center);
+                }
             }
         }
+
+        // // get anchor coordinates of the screen
+        // HexCoord topLeft = pixelToHex(0, 0);
+        // HexCoord bottomRight = pixelToHex(getWidth(), getHeight());
+
+        // // large enough to cover the visible screen.
+        // int minQ = topLeft.q;
+        // int maxQ = bottomRight.q;
+        // int minR = bottomRight.r;
+        // int maxR = topLeft.r;
+        // // int range = 20; //calculateVisibleRange();
+
+        // for (int q = minQ; q <= maxQ; q++) {
+        //     for (int r = minR; r <= maxR; r++) {
+
+        //         HexCoord coord = new HexCoord(
+        //             (int) cameraQ + q,
+        //             (int) cameraR + r
+        //         );
+
+        //         Point2D center = hexToPixel(coord);
+
+        //         // don't bother drawing hexagons outside the screen.
+        //         if (!isVisible(center)) { continue; }
+
+        //         drawHex(g2, center, new Color(65, 65, 65));
+        //     }
+        // }
     }
+
+    /****************************************************************************************************************************
+     * Image-based hexagon rendering
+     ****************************************************************************************************************************/
+    private void ensureHexImages() {
+        if (cachedHexSize == hexSize) {
+            return;
+        }
+
+        emptyHexImage = createHexImage(new Color(65, 65, 65));
+
+        tileImages.clear();
+        for (TileType tile : TileType.values()) {
+            tileImages.put(tile, createHexImage(getTileColor(tile))); // createHexImage(getTileColor(tile)));
+        }
+
+        cachedHexSize = hexSize;
+        gridBackground = null;
+    }
+
+    private BufferedImage createHexImage(Color fillColor) {
+        // Padding keeps the outline and antialiasing inside the image.
+        int width = (int) Math.ceil(Math.sqrt(3) * hexSize) + 4;
+        int height = (int) Math.ceil(2 * hexSize) + 4;
+
+        BufferedImage image = new BufferedImage(
+            width, height, BufferedImage.TYPE_INT_ARGB
+        );
+
+        Graphics2D g2 = image.createGraphics();
+        try {
+            g2.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+            );
+
+            Polygon hexagon = createHexagon(width / 2.0, height / 2.0);
+
+            g2.setColor(fillColor);
+            g2.fillPolygon(hexagon);
+
+            double opacity = Math.max(
+                0, Math.min(1, (hexSize - 15) / 15.0)
+            );
+
+            g2.setColor(new Color(90, 90, 90, (int) (255 * opacity)));
+            g2.drawPolygon(hexagon);
+        } finally {
+            g2.dispose();
+        }
+
+        return image;
+    }
+
+    private void drawHexImage(
+        Graphics2D g2,
+        BufferedImage image,
+        Point2D center
+    ) {
+        int x = (int) Math.round(center.getX() - image.getWidth() / 2.0);
+        int y = (int) Math.round(center.getY() - image.getHeight() / 2.0);
+
+        g2.drawImage(image, x, y, null);
+    }
+
+    private void ensureGridBackground() {
+        if (gridBackground != null
+            && gridBackground.getWidth() == getWidth()
+            && gridBackground.getHeight() == getHeight()) {
+            return;
+        }
+
+        gridBackground = new BufferedImage(
+            getWidth(), getHeight(), BufferedImage.TYPE_INT_RGB
+        );
+
+        Graphics2D g2 = gridBackground.createGraphics();
+        try {
+            g2.setColor(getBackground());
+            g2.fillRect(0, 0, getWidth(), getHeight());
+
+            drawGrid(g2);
+        } finally {
+            g2.dispose();
+        }
+    }
+
+    // private BufferedImage imageForColor(Color color) {
+    //     return tileImages.computeIfAbsent(
+    //         color.getRGB(),
+    //         key -> createHexImage(color)
+    //     );
+    // }
+
+    /****************************************************************************************************************************
+     * TO BE REPLACED: Repaint-based hexagon rendering
+     ****************************************************************************************************************************/
 
     /*
      * Draws all occupied tiles in the HexGrid
@@ -100,46 +263,57 @@ public class GridPanel extends JPanel {
     private void drawTiles(Graphics2D g2) {
 
         for (HexCoord coord : grid.getOccupiedCoordinates()) {
+        Point2D center = hexToPixel(coord);
 
-            Point2D center = hexToPixel(coord);
-
-            if (!isVisible(center)) {
-                continue;
-            }
-
-            TileType tile = grid.get(coord);
-
-            drawHex(
-                g2,
-                center,
-                getTileColor(tile)
-            );
+        if (!isVisible(center)) {
+            continue;
         }
+
+        BufferedImage image = tileImages.get(grid.get(coord));
+        drawHexImage(g2, image, center);
+    }
+
+        // for (HexCoord coord : grid.getOccupiedCoordinates()) {
+
+        //     Point2D center = hexToPixel(coord);
+
+        //     if (!isVisible(center)) {
+        //         continue;
+        //     }
+
+        //     TileType tile = grid.get(coord);
+
+        //     drawHex(
+        //         g2,
+        //         center,
+        //         getTileColor(tile)
+        //     );
+        // }
     }
 
     /*
      * Draws one hexagon centered at a pixel location
      */
-    private void drawHex(
-        Graphics2D g2,
-        Point2D center,
-        Color color
-    ) {
+    // private void drawHex(
+    //     Graphics2D g2,
+    //     Point2D center,
+    //     Color color
+    // ) {
 
-        Polygon hexagon = createHexagon(
-            center.getX(),
-            center.getY()
-        );
+    //     Polygon hexagon = createHexagon(
+    //         center.getX(),
+    //         center.getY()
+    //     );
 
-        g2.setColor(color);
-        g2.fillPolygon(hexagon);
+    //     g2.setColor(color);
+    //     g2.fillPolygon(hexagon);
 
-        g2.setColor(new Color(
-            90, 90, 90, 
-            (int) (255 * (hexSize > 30 ? 1 : Math.max((hexSize - 15) / 15.0, 0)))
-        ));
-        g2.drawPolygon(hexagon);
-    }
+    //     g2.setColor(new Color(
+    //         90, 90, 90, 
+    //         (int) (255 * (hexSize > 30 ? 1 : Math.max((hexSize - 15) / 15.0, 0)))
+    //     ));
+    //     g2.drawPolygon(hexagon);
+    // }
 
     /*
      * Creates a pointy-top hexagon
@@ -166,6 +340,10 @@ public class GridPanel extends JPanel {
 
         return polygon;
     }
+
+    /****************************************************************************************************************************
+     * Coordinate calculation functions
+     ****************************************************************************************************************************/
 
     /*
      * Converts axial hex coordinates to pixel coordinates
@@ -230,6 +408,10 @@ public class GridPanel extends JPanel {
         return new HexCoord(rq, rr);
     }
 
+    /****************************************************************************************************************************
+     * Input handlers
+     ****************************************************************************************************************************/
+
     /*
      * Handles mouse interaction
      */
@@ -271,6 +453,7 @@ public class GridPanel extends JPanel {
 
                 lastMousePosition = current;
 
+                gridBackground = null;
                 repaint();
             }
         });
@@ -301,6 +484,10 @@ public class GridPanel extends JPanel {
         });
     }
 
+    /****************************************************************************************************************************
+     * Actions
+     ****************************************************************************************************************************/
+
     private void zoom(boolean zoomIn) {
         double oldSize = hexSize;
 
@@ -310,7 +497,11 @@ public class GridPanel extends JPanel {
         // prevent unreasonable zoom levels
         hexSize = Math.max(5.0, Math.min(hexSize, 150.0));
 
-        if (oldSize != hexSize) { repaint(); }
+        // if (oldSize != hexSize) { repaint(); }
+        if (oldSize != hexSize) {
+            gridBackground = null;
+            repaint();
+        }
     }
 
     /*
