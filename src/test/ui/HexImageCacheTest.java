@@ -1,6 +1,6 @@
 /* 
  * Running:
- * javac -d out test/ui/HexImageCacheTest.java
+ * javac -d out src/test/ui/HexImageCacheTest.java
  * java -cp out test.ui.HexImageCacheTest
  */
 
