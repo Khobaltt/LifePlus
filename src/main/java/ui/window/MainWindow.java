@@ -1,8 +1,10 @@
-package main.java.ui;
-
-import main.java.core.HexGrid;
+package main.java.ui.window;
 
 import javax.swing.*;
+
+import main.java.core.rect.RectGrid;
+import main.java.ui.rect.RectGridPanel;
+
 import java.awt.*;
 
 public class MainWindow extends JFrame {
@@ -12,6 +14,7 @@ public class MainWindow extends JFrame {
 
     private JPanel gridPanel;
     private JPanel toolPanel;
+    private JPanel debugPanel;
 
     public MainWindow() {
         super("Life Plus");
@@ -50,8 +53,14 @@ public class MainWindow extends JFrame {
         toolPanel.setPreferredSize(new Dimension(250, 0));
         toolPanel.setBackground(new Color(230, 230, 230));
 
+        // debug
+        debugPanel = new JPanel();
+        debugPanel.setPreferredSize(new Dimension(250, 0));
+        debugPanel.setBackground(new Color(230, 230, 230));
+
         add(gridPanel, BorderLayout.CENTER);
         add(toolPanel, BorderLayout.WEST);
+        add(debugPanel, BorderLayout.EAST);
     }
 
     /*
@@ -80,6 +89,17 @@ public class MainWindow extends JFrame {
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
 
+        // window menu
+        JMenu windowMenu = new JMenu("Window");
+
+        JMenuItem toolsItem = new JMenuItem("Tools");
+        JMenuItem debugItem = new JMenuItem("Debug");
+        JMenuItem settingsItem = new JMenuItem("Settings");
+
+        windowMenu.add(toolsItem);
+        windowMenu.add(debugItem);
+        windowMenu.add(settingsItem);
+
         // simulation menu
         JMenu simulationMenu = new JMenu("Simulation");
 
@@ -94,6 +114,7 @@ public class MainWindow extends JFrame {
 
         // add menus to menu bar
         menuBar.add(fileMenu);
+        menuBar.add(windowMenu);
         menuBar.add(simulationMenu);
 
         // add the menu bar to window
@@ -105,8 +126,8 @@ public class MainWindow extends JFrame {
      */
     public void setGridPanel() {
 
-        HexGrid simulationGrid = new HexGrid();
-        gridPanel = new GridPanel(simulationGrid);
+        RectGrid simulationGrid = new RectGrid();
+        gridPanel = new RectGridPanel(simulationGrid);
 
         add(gridPanel, BorderLayout.CENTER);
 
@@ -122,7 +143,21 @@ public class MainWindow extends JFrame {
 
         toolPanel = panel;
 
-        add(toolPanel, BorderLayout.EAST);
+        add(toolPanel, BorderLayout.WEST);
+
+        revalidate();
+        repaint();
+    }
+
+    /*
+     * Replaces the current debug panel
+     */
+    public void setDebugPanel(JPanel panel) {
+        remove(debugPanel);
+
+        debugPanel = panel;
+
+        add(debugPanel, BorderLayout.EAST);
 
         revalidate();
         repaint();

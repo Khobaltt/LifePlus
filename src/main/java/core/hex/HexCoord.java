@@ -1,4 +1,4 @@
-package main.java.core;
+package main.java.core.hex;
 
 import java.util.List;
 

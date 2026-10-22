@@ -6,7 +6,7 @@
 
 package main.java;
 
-import main.java.ui.MainWindow;
+import main.java.ui.window.MainWindow;
 
 public class Main {
 

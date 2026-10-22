@@ -1,10 +1,9 @@
-package main.java.ui;
+package main.java.ui.hex;
 
-// files
-import main.java.core.HexCoord;
-import main.java.core.HexGrid;
 import main.java.core.TileType;
 // import main.java.core.TileColor;
+import main.java.core.hex.HexCoord;
+import main.java.core.hex.HexGrid;
 
 // util
 import java.util.EnumMap;

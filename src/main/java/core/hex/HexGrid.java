@@ -1,13 +1,15 @@
-package main.java.core;
+package main.java.core.hex;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import main.java.core.TileColor;
+
 public class HexGrid {
 
-    private final Map<HexCoord, TileType> tiles;
+    private final Map<HexCoord, TileColor> tiles;
 
     public HexGrid() {
         this.tiles = new HashMap<>();
@@ -17,7 +19,7 @@ public class HexGrid {
      * Returns the tile type at the given coordinate
      * Returns null if the coordinate is empty
      */
-    public TileType get(HexCoord coord) {
+    public TileColor get(HexCoord coord) {
         return tiles.get(coord);
     }
 
@@ -25,17 +27,17 @@ public class HexGrid {
      * Places a tile at the given coordinate.
      * If a tile already exists there, it is replaced.
      */
-    public void set(HexCoord coord, TileType tile) {
+    public void set(HexCoord coord, TileColor color) {
         if (coord == null) { throw new IllegalArgumentException("Coordinate cannot be null."); }
-        if (tile == null) { throw new IllegalArgumentException("Tile cannot be null."); }
-        tiles.put(coord, tile);
+        if (color == null) { throw new IllegalArgumentException("Color cannot be null."); }
+        tiles.put(coord, color);
     }
 
     /*
      * Removes the tile at the given coordinate.
      * Return the removed tile, or null if the coordinate was empty.
      */
-    public TileType remove(HexCoord coord) {
+    public TileColor remove(HexCoord coord) {
         return tiles.remove(coord);
     }
 
@@ -87,7 +89,7 @@ public class HexGrid {
     /*
      * Returns a map containing the current grid contents.
      */
-    public Map<HexCoord, TileType> getTiles() {
+    public Map<HexCoord, TileColor> getTiles() {
         return tiles;
     }
 }
