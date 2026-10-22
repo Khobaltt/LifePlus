@@ -310,18 +310,23 @@ public class RectGridPanel extends JPanel {
      */
     private RectCoord pixelToRect(double x, double y) {
 
-        // move the origin back to the camera
-        x -= getWidth() / 2.0;
-        y -= getHeight() / 2.0;
-
-        x += rectSize * cameraX;
-        y += rectSize * cameraY;
-
-        // convert screen offsets to fractional cartesian tile coordinates
-        x /= rectSize;
-        y /= rectSize;
+        x = (x - getWidth() / 2.0) / rectSize + cameraX;
+        y = (getHeight() / 2.0 - y) / rectSize + cameraY;
 
         return roundCartesianCoordinates(x, y);
+
+        // // move the origin back to the camera
+        // x -= getWidth() / 2.0;
+        // y -= getHeight() / 2.0;
+
+        // x += rectSize * cameraX;
+        // y += rectSize * cameraY;
+
+        // // convert screen offsets to fractional cartesian tile coordinates
+        // x /= rectSize;
+        // y /= rectSize;
+
+        // return roundCartesianCoordinates(x, y);
     }
 
     /*
@@ -478,10 +483,8 @@ public class RectGridPanel extends JPanel {
      * Places the currently selected tile
      */
     private void placeTile(int x, int y) {
-
         RectCoord coord = pixelToRect(x, y);
-        grid.set(coord, selectedColor);
-
+        setTile(coord, selectedColor);
         repaint();
     }
 
@@ -489,10 +492,8 @@ public class RectGridPanel extends JPanel {
      * Removes the tile at the clicked position
      */
     private void removeTile(int x, int y) {
-
         RectCoord coord = pixelToRect(x, y);
-        grid.remove(coord);
-
+        clearTile(coord);
         repaint();
     }
 

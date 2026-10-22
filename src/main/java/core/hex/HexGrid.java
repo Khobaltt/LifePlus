@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import main.java.core.TileColor;
+import main.java.core.type.TileColor;
 
 public class HexGrid {
 

@@ -1,4 +1,4 @@
-package main.java.core;
+package main.java.core.type;
 
 public record TileColor(int red, int green, int blue) {
     public TileColor {
