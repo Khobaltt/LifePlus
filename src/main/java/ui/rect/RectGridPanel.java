@@ -21,17 +21,29 @@ import java.awt.image.DataBufferInt;
 public class RectGridPanel extends JPanel {
 
     // initial values
-    private final double INIT_SCALE_FACTOR = 1.02f;
-    private final double INIT_PANNING_SPEED = 1.0f;
+    private final double INIT_SCALE_FACTOR = 1.1f;
+    private final double INIT_PANNING_SPEED = 30.0f;
     private final double INIT_RECT_SIZE = 30.0f;
     private final double INIT_CAM_X = 0.0f;
     private final double INIT_CAM_Y = 0.0f;
     private final Color INIT_BRUSH_COLOR = new Color(255, 255, 255);
+    private final int INIT_BRUSH_SIZE = 1;
     private final Color INIT_BACKGROUND_COLOR = new Color(0, 0, 0);
+    private final Color INIT_GRID_COLOR = new Color(90, 90, 90);
+    private final double INIT_GRID_TRANSPARENCY_A = 5f;
+    private final double INIT_GRID_TRANSPARENCY_B = 15f;
     private static final int INIT_CHUNK_SIZE = 32;
+
+    // debug settings
+    private boolean highlightOrigin = true;
+    private boolean trackMousePosition = true;
+    private Color highlightColor = new Color(255, 255, 0);
 
     // grid that is rendered
     private final RectGrid grid;
+    private Color gridColor = INIT_GRID_COLOR;
+    private double gridTransparencyA = INIT_GRID_TRANSPARENCY_A;
+    private double gridTransparencyB = INIT_GRID_TRANSPARENCY_B;
 
     // size of a hexagon from center to vertex
     private double rectSize = INIT_RECT_SIZE;
@@ -44,13 +56,10 @@ public class RectGridPanel extends JPanel {
     private final double scaleFactor = INIT_SCALE_FACTOR;
     private final double panningSpeed = INIT_PANNING_SPEED;
 
-    // tile currently placed by left-click
-    private Color selectedColor = INIT_BRUSH_COLOR;
-
     // brush type and size
-    // private BrushType brushType = ;
-    // private TileColor brushColor = new TileColor(255, 255, 255);
-    // private int brushSize = 1;
+    // private BrushType brushType = BrushType.SET;
+    private Color selectedColor = INIT_BRUSH_COLOR;
+    private int brushSize = INIT_BRUSH_SIZE;
 
     // mouse state for panning
     private Point lastMousePosition;
@@ -168,7 +177,7 @@ public class RectGridPanel extends JPanel {
             );
 
             drawTiles(g2);
-            if (rectSize > 5) { drawGrid(g2); }
+            if (rectSize > gridTransparencyA) { drawGrid(g2); }
 
         } finally { g2.dispose(); }
     }
@@ -223,16 +232,30 @@ public class RectGridPanel extends JPanel {
         if (firstX > 0) { firstX -= rectSize; }
         if (firstY > 0) { firstY -= rectSize; }
 
-        g2.setColor(new Color(90, 90, 90));
+        if (rectSize > gridTransparencyA && rectSize < gridTransparencyB) {
+            Color transparentGridColor = new Color(
+                gridColor.getRed(), 
+                gridColor.getGreen(), 
+                gridColor.getBlue(), 
+                (int) Math.round((rectSize - gridTransparencyA) / (gridTransparencyB - gridTransparencyA) * 255)
+            );
+            g2.setColor(transparentGridColor);
+        } else { g2.setColor(gridColor); }
 
-        for (double x = firstX; x < getWidth(); x += rectSize) {
+        // draw grid lines
+        for (double x = firstX; x < getWidth() && x != originX; x += rectSize) {
             int screenX = (int) Math.round(x);
             g2.drawLine(screenX, 0, screenX, getHeight());
         }
-        for (double y = firstY; y < getHeight(); y += rectSize) {
+        for (double y = firstY; y < getHeight() && y != originY; y += rectSize) {
             int screenY = (int) Math.round(y);
             g2.drawLine(0, screenY, getWidth(), screenY);
         }
+
+        // draw axis lines
+        if (highlightOrigin) { g2.setColor(highlightColor); }
+        g2.drawLine((int) Math.round(originX), 0, (int) Math.round(originX), getHeight());
+        g2.drawLine(0, (int) Math.round(originY), getWidth(), (int) Math.round(originY));
     }
 
     /*
@@ -446,8 +469,9 @@ public class RectGridPanel extends JPanel {
     }
 
     private void pan(double x, double y) {
-        cameraX += panningSpeed * x;
-        cameraY += panningSpeed * y;
+        cameraX += panningSpeed / rectSize * x;
+        cameraY += panningSpeed / rectSize * y;
+        repaint();
     }
 
     /*
